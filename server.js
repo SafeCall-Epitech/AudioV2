@@ -16,25 +16,100 @@ const io = require("socket.io")(server, {
   },
 });
 
+const mapUsers = new Map()
+const mapCalls = new Map()
+
 io.on("connection", (socket) => {
-  console.log("a user is connected: ", socket.id);
-  socket.emit("me", socket.id);
+    console.log("a user is connected: ", socket.id)
+    socket.emit("me", socket.id)
 
-  socket.on("disconnect", () => {
-    console.log("a user disconnected: ", socket.id);
-    socket.broadcast.emit("callEnded");
-  });
+    socket.on("pseudo", (data) => {
+        if (!mapUsers.has(data.pseudo)) {
+            mapUsers.set(socket.id, data.pseudo)
+        }
+        if (mapCalls.has(data.pseudo)) {
+            io.to(socket.id).emit("callReceived", {signal: mapCalls.get(data.pseudo)[1][0], from: mapCalls.get(data.pseudo)[1][1]})
+        }
+        console.log("nb users connected:", mapUsers.size)
+        mapUsers.forEach((value, key) => {
+            console.log(`${key}: ${value}`)
+        });
+    })
 
-  socket.on("callUser", (data) => {
-    console.log("user to call:", data.userToCall, " signal:", data.signalData.type);
-    io.to(data.userToCall).emit("callUser", { signal: data.signalData, from: data.from });
-  });
+    socket.on("disconnect", () => {
+        for (const [key, values] of mapCalls.entries()) {
+            if (key == mapUsers.get(socket.id)) {
+                console.log("endcall3", mapUsers.get(socket.id))
+                for (const [k, v] of mapUsers.entries()) {
+                    if (v == values[0]) {
+                        io.to(k).emit("callEnded");
+                        break;
+                    }
+                }
+                mapCalls.delete(key)
+                break
+            }
+            if (values[0] == mapUsers.get(socket.id)) {
+                console.log("endcall4", mapUsers.get(socket.id))
 
-  socket.on("answerCall", (data) => {
-    console.log("answer to:", data.to, " signal:", data.signal.type);
-    io.to(data.to).emit("callAccepted", data.signal);
-  });
-});
+                for (const [k, v] of mapUsers.entries()) {
+                    if (v == key) {
+                        io.to(k).emit("callEnded");
+                        break;
+                    }
+                }
+                mapCalls.delete(key)
+                break
+            }
+        }
+        console.log("a user disconnected: ", socket.id, mapUsers.get(socket.id))
+        mapUsers.delete(socket.id)
+    })
+
+    socket.on("callUser", (data) =>  {
+        console.log("user to call:", data.userToCall, " signal:", data.signalData.type)
+        mapCalls.set(data.userToCall, [mapUsers.get(socket.id), [data.signalData, data.from]])
+        for (const [key, value] of mapUsers.entries()) {
+            if (value === data.userToCall) {
+                io.to(key).emit("callReceived", {signal: data.signalData, from: data.from})
+                break
+            }
+        }
+    })
+
+    socket.on("endCall", () => {
+        for (const [key, values] of mapCalls.entries()) {
+            if (key == mapUsers.get(socket.id)) {
+                console.log("endcall1", mapUsers.get(socket.id))
+                for (const [k, v] of mapUsers.entries()) {
+                    if (v == values[0]) {
+                        io.to(k).emit("callEnded");
+                        break;
+                    }
+                }
+                mapCalls.delete(key)
+                break
+            }
+            if (values[0] == mapUsers.get(socket.id)) {
+                console.log("endcall2", mapUsers.get(socket.id))
+
+                for (const [k, v] of mapUsers.entries()) {
+                    if (v == key) {
+                        io.to(k).emit("callEnded");
+                        break;
+                    }
+                }
+                mapCalls.delete(key)
+                break
+            }
+        }
+    })
+
+    socket.on("answerCall", (data) => {
+        console.log("answer to:", data.to, " signal:", data.signal.type)
+        io.to(data.to).emit("callAccepted", data.signal)
+    })
+})
 
 const PORT = 5000;
 
