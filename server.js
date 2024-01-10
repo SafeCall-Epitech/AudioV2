@@ -68,10 +68,10 @@ io.on("connection", (socket) => {
 
     socket.on("callUser", (data) =>  {
         console.log("user to call:", data.userToCall, " signal:", data.signalData.type)
-        mapCalls.set(data.userToCall, [mapUsers.get(socket.id), [data.signalData, data.from]])
+        mapCalls.set(data.userToCall, [mapUsers.get(socket.id), [data.signalData, socket.id]])
         for (const [key, value] of mapUsers.entries()) {
             if (value === data.userToCall) {
-                io.to(key).emit("callReceived", {signal: data.signalData, from: data.from})
+                io.to(key).emit("callReceived", {signal: data.signalData, from: socket.id})
                 break
             }
         }
