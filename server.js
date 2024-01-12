@@ -21,7 +21,7 @@ const mapCalls = new Map()
 
 io.on("connection", (socket) => {
     console.log("a user is connected: ", socket.id)
-    socket.emit("me", socket.id)
+    io.to(socket.id).emit("me", socket.id)
 
     socket.on("pseudo", (data) => {
         if (!mapUsers.has(data.pseudo)) {
@@ -42,7 +42,7 @@ io.on("connection", (socket) => {
                 console.log("endcall3", mapUsers.get(socket.id))
                 for (const [k, v] of mapUsers.entries()) {
                     if (v == values[0]) {
-                        io.to(k).emit("callEnded");
+                        io.to(k).emit("callEnded")
                         break;
                     }
                 }
@@ -54,7 +54,7 @@ io.on("connection", (socket) => {
 
                 for (const [k, v] of mapUsers.entries()) {
                     if (v == key) {
-                        io.to(k).emit("callEnded");
+                        io.to(k).emit("callEnded")
                         break;
                     }
                 }
@@ -71,6 +71,7 @@ io.on("connection", (socket) => {
         mapCalls.set(data.userToCall, [mapUsers.get(socket.id), [data.signalData, socket.id]])
         for (const [key, value] of mapUsers.entries()) {
             if (value === data.userToCall) {
+                console.log(key, value)
                 io.to(key).emit("callReceived", {signal: data.signalData, from: socket.id})
                 break
             }
@@ -83,7 +84,7 @@ io.on("connection", (socket) => {
                 console.log("endcall1", mapUsers.get(socket.id))
                 for (const [k, v] of mapUsers.entries()) {
                     if (v == values[0]) {
-                        io.to(k).emit("callEnded");
+                        io.to(k).emit("callEnded")
                         break;
                     }
                 }
@@ -95,7 +96,7 @@ io.on("connection", (socket) => {
 
                 for (const [k, v] of mapUsers.entries()) {
                     if (v == key) {
-                        io.to(k).emit("callEnded");
+                        io.to(k).emit("callEnded")
                         break;
                     }
                 }
@@ -103,6 +104,10 @@ io.on("connection", (socket) => {
                 break
             }
         }
+        console.log("nb calls:", mapCalls.size)
+        mapCalls.forEach((value, key) => {
+            console.log(key, value[0])
+        });
     })
 
     socket.on("answerCall", (data) => {
